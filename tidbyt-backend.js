@@ -2,12 +2,12 @@
 // Automatically updates your Tidbyt display with open ticket count every 5 minutes
 
 const axios = require('axios');
+const http = require('http');
 
 // Tidbyt endpoint
 const TIDBYT_API = 'https://api.tidbyt.com/v0';
 
-// Syncro endpoint - you need to replace 'YOUR_SUBDOMAIN' with your actual subdomain
-// For example, if your Syncro URL is https://mycompany.syncromsp.com, use 'mycompany'
+// Syncro endpoint
 const SYNCRO_SUBDOMAIN = process.env.SYNCRO_SUBDOMAIN || 'YOUR_SUBDOMAIN';
 const SYNCRO_API = `https://${SYNCRO_SUBDOMAIN}.syncromsp.com/api/v1`;
 
@@ -95,34 +95,69 @@ def main(config):
 
     // Step 3: Send to Tidbyt using installations endpoint
     console.log('📤 Pushing to Tidbyt...');
+    console.log(`   Endpoint: ${TIDBYT_API}/devices/${TIDBYT_DEVICE}/installations`);
+    console.log(`   Applet code length: ${appletCode.length} characters`);
     
-    const tidbytRes = await axios.post(
-      `${TIDBYT_API}/devices/${TIDBYT_DEVICE}/installations`,
-      {
-        applet: {
-          source: appletCode
-        }
-      },
-      {
-        headers: {
-          'Authorization': `Bearer ${TIDBYT_KEY}`,
-          'Content-Type': 'application/json'
+    try {
+      const tidbytRes = await axios.post(
+        `${TIDBYT_API}/devices/${TIDBYT_DEVICE}/installations`,
+        {
+          applet: {
+            source: appletCode
+          }
         },
-        timeout: 10000
+        {
+          headers: {
+            'Authorization': `Bearer ${TIDBYT_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          timeout: 10000,
+          validateStatus: false // Don't throw on any status code
+        }
+      );
+      
+      console.log(`   Response Status: ${tidbytRes.status}`);
+      console.log(`   Response Body: ${JSON.stringify(tidbytRes.data, null, 2)}`);
+      
+      if (tidbytRes.status === 200 || tidbytRes.status === 201) {
+        console.log(`✅ Successfully updated Tidbyt! (${ticketCount} tickets)\n`);
+      } else {
+        console.error(`❌ Tidbyt API returned ${tidbytRes.status}: ${JSON.stringify(tidbytRes.data)}\n`);
       }
-    );
-    
-    console.log(`✅ Successfully updated Tidbyt! (${ticketCount} tickets)\n`);
+    } catch (postError) {
+      console.error(`❌ Network error during push: ${postError.message}\n`);
+      throw postError;
+    }
     
   } catch (error) {
     console.error(`❌ Update failed: ${error.message}`);
     if (error.response) {
       console.error(`   Status: ${error.response.status}`);
-      console.error(`   Response: ${JSON.stringify(error.response.data, null, 2)}`);
+      console.error(`   Headers: ${JSON.stringify(error.response.headers, null, 2)}`);
+      console.error(`   Data: ${JSON.stringify(error.response.data, null, 2)}`);
+    }
+    if (error.config) {
+      console.error(`   Request URL: ${error.config.url}`);
     }
     console.error(`   Retrying in 5 minutes...\n`);
   }
 }
+
+// Create HTTP server for Render health checks
+const server = http.createServer((req, res) => {
+  if (req.url === '/health') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ status: 'ok', lastUpdate: new Date().toISOString() }));
+  } else {
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.end('Tidbyt Syncro Backend Running\n');
+  }
+});
+
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+  console.log(`🌐 HTTP Server listening on port ${PORT}`);
+});
 
 // Run immediately on startup
 updateTidbyt();
