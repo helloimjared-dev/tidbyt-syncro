@@ -1,5 +1,5 @@
 // Tidbyt + Syncro 24/7 Backend
-// Generates WebP image of ticket count and pushes to Tidbyt
+// Generates WebP image of unresolved ticket count and pushes to Tidbyt
 
 const axios = require('axios');
 const http = require('http');
@@ -25,16 +25,21 @@ console.log('🔄 Starting automatic updates...\n');
 
 async function updateTidbyt() {
   try {
-    console.log(`[${new Date().toLocaleTimeString()}] Fetching open tickets from Syncro...`);
+    console.log(`[${new Date().toLocaleTimeString()}] Fetching unresolved tickets from Syncro...`);
     
     let ticketCount = 0;
+
     try {
-      const syncroRes = await axios.get(`${SYNCRO_API}/tickets?status=open&api_key=${SYNCRO_TOKEN}`, {
-        timeout: 10000
-      });
+      const syncroRes = await axios.get(
+        `${SYNCRO_API}/tickets?status=unresolved&api_key=${SYNCRO_TOKEN}`,
+        {
+          timeout: 10000
+        }
+      );
       
       ticketCount = syncroRes.data.tickets?.length || 0;
-      console.log(`✅ Found ${ticketCount} open tickets`);
+      console.log(`✅ Found ${ticketCount} unresolved tickets`);
+      
     } catch (syncroError) {
       console.error(`❌ Syncro API error: ${syncroError.message}`);
       return;
@@ -105,10 +110,14 @@ const server = http.createServer((req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`🌐 HTTP Server listening on port ${PORT}\n`));
+
+server.listen(PORT, () => {
+  console.log(`🌐 HTTP Server listening on port ${PORT}\n`);
+});
 
 updateTidbyt();
 setInterval(updateTidbyt, 5 * 60 * 1000);
 
 console.log('💚 Backend running. Updates every 5 minutes.\n');
+
 process.on('SIGTERM', () => process.exit(0));
