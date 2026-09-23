@@ -1,9 +1,13 @@
+// Tidbyt + Syncro 24/7 Backend
+// Automatically updates your Tidbyt display with open ticket count every 5 minutes
+
 const axios = require('axios');
 
 // Tidbyt endpoint
 const TIDBYT_API = 'https://api.tidbyt.com/v0';
 
-// Syncro endpoint
+// Syncro endpoint - you need to replace 'YOUR_SUBDOMAIN' with your actual subdomain
+// For example, if your Syncro URL is https://mycompany.syncromsp.com, use 'mycompany'
 const SYNCRO_SUBDOMAIN = process.env.SYNCRO_SUBDOMAIN || 'YOUR_SUBDOMAIN';
 const SYNCRO_API = `https://${SYNCRO_SUBDOMAIN}.syncromsp.com/api/v1`;
 
@@ -19,7 +23,7 @@ if (!TIDBYT_KEY || !TIDBYT_DEVICE || !SYNCRO_TOKEN || SYNCRO_SUBDOMAIN === 'YOUR
   console.error('  - TIDBYT_KEY');
   console.error('  - TIDBYT_DEVICE');
   console.error('  - SYNCRO_TOKEN');
-  console.error('  - SYNCRO_SUBDOMAIN');
+  console.error('  - SYNCRO_SUBDOMAIN (e.g., "mycompany" from https://mycompany.syncromsp.com)');
   process.exit(1);
 }
 
@@ -89,7 +93,7 @@ def main(config):
     )
 `;
 
-    // Step 3: Send to Tidbyt
+    // Step 3: Send to Tidbyt using installations endpoint
     console.log('📤 Pushing to Tidbyt...');
     
     const tidbytRes = await axios.post(
@@ -114,7 +118,7 @@ def main(config):
     console.error(`❌ Update failed: ${error.message}`);
     if (error.response) {
       console.error(`   Status: ${error.response.status}`);
-      console.error(`   Data: ${JSON.stringify(error.response.data)}`);
+      console.error(`   Response: ${JSON.stringify(error.response.data, null, 2)}`);
     }
     console.error(`   Retrying in 5 minutes...\n`);
   }
@@ -123,9 +127,10 @@ def main(config):
 // Run immediately on startup
 updateTidbyt();
 
-// Then run every 5 minutes
+// Then run every 5 minutes (300,000 milliseconds)
 setInterval(updateTidbyt, 5 * 60 * 1000);
 
+// Keep the process alive
 console.log('💚 Backend running. Press Ctrl+C to stop.\n');
 process.on('SIGTERM', () => {
   console.log('🛑 Shutting down...');
