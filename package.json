@@ -1,0 +1,12 @@
+{
+  "name": "tidbyt-syncro-backend",
+  "version": "1.0.0",
+  "description": "24/7 Tidbyt + Syncro integration",
+  "main": "tidbyt-backend.js",
+  "scripts": {
+    "start": "node tidbyt-backend.js"
+  },
+  "dependencies": {
+    "axios": "^1.6.0"
+  }
+}
