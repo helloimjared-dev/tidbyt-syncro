@@ -1,7 +1,9 @@
 // Tidbyt + Syncro 24/7 Backend
+// Generates WebP image of ticket count and pushes to Tidbyt
 
 const axios = require('axios');
 const http = require('http');
+const sharp = require('sharp');
 
 const TIDBYT_API = 'https://api.tidbyt.com/v0';
 const SYNCRO_SUBDOMAIN = process.env.SYNCRO_SUBDOMAIN || 'YOUR_SUBDOMAIN';
@@ -38,41 +40,39 @@ async function updateTidbyt() {
       return;
     }
     
-    const appletCode = `load("render.star", "render")
-
-def main(config):
-    count = ${ticketCount}
+    // Determine color based on ticket count
+    let color = '#00ff00'; // Green
+    if (ticketCount > 10) color = '#ff0000'; // Red
+    else if (ticketCount > 5) color = '#ffaa00'; // Orange
     
-    if count > 10:
-        color = "#ff0000"
-    elif count > 5:
-        color = "#ffaa00"
-    else:
-        color = "#00ff00"
-    
-    return render.Root(
-        child=render.Box(
-            color="#000",
-            child=render.Column(
-                main_align="space_around",
-                cross_align="center",
-                children=[
-                    render.Text(text="OPEN", font="tb-8", color="#0ff"),
-                    render.Text(text="TICKETS", font="tb-8", color="#0ff"),
-                    render.BigText(text=str(count), font="6x13", color=color),
-                    render.Text(text="Synced", font="tom-thumb", color="#888")
-                ]
-            )
-        )
-    )
+    // Create SVG image
+    const svgImage = `
+<svg width="64" height="32" xmlns="http://www.w3.org/2000/svg">
+  <rect width="64" height="32" fill="#000000"/>
+  <text x="32" y="8" font-family="Arial" font-size="6" fill="#00ffff" text-anchor="middle">TICKETS</text>
+  <text x="32" y="22" font-family="Arial" font-size="16" fill="${color}" text-anchor="middle" font-weight="bold">${ticketCount}</text>
+</svg>
 `;
-
-    console.log('📤 Pushing to Tidbyt...');
     
-    const url = `${TIDBYT_API}/devices/${TIDBYT_DEVICE}/push`;
-    const payload = { applet: appletCode };
+    console.log('🎨 Generating WebP image...');
     
     try {
+      const imageBuffer = await sharp(Buffer.from(svgImage))
+        .webp()
+        .toBuffer();
+      
+      const base64Image = imageBuffer.toString('base64');
+      console.log(`✅ Generated WebP image (${imageBuffer.length} bytes)`);
+      
+      // Push to Tidbyt
+      console.log('📤 Pushing to Tidbyt...');
+      
+      const url = `${TIDBYT_API}/devices/${TIDBYT_DEVICE}/push`;
+      const payload = {
+        image: base64Image,
+        duration: 300  // 5 minutes in seconds
+      };
+      
       const tidbytRes = await axios.post(url, payload, {
         headers: {
           'Authorization': `Bearer ${TIDBYT_KEY}`,
