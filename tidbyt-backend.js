@@ -23,7 +23,7 @@ if (!TIDBYT_KEY || !TIDBYT_DEVICE || !SYNCRO_TOKEN || SYNCRO_SUBDOMAIN === 'YOUR
   console.error('  - TIDBYT_KEY');
   console.error('  - TIDBYT_DEVICE');
   console.error('  - SYNCRO_TOKEN');
-  console.error('  - SYNCRO_SUBDOMAIN (e.g., "mycompany" from https://mycompany.syncromsp.com)');
+  console.error('  - SYNCRO_SUBDOMAIN (e.g., "noobeh" from https://noobeh.syncromsp.com)');
   process.exit(1);
 }
 
@@ -49,12 +49,11 @@ async function updateTidbyt() {
     } catch (syncroError) {
       console.error(`❌ Syncro API error: ${syncroError.message}`);
       console.error(`   Response: ${JSON.stringify(syncroError.response?.data)}`);
-      return; // Stop here if we can't get tickets
+      return;
     }
     
     // Step 2: Create the Pixlet app code
-    const appletCode = `
-load("render.star", "render")
+    const appletCode = `load("render.star", "render")
 
 def main(config):
     count = ${ticketCount}
@@ -90,7 +89,7 @@ def main(config):
                         color=color
                     ),
                     render.Text(
-                        text="Updated",
+                        text="Synced",
                         font="tom-thumb",
                         color="#888"
                     )
@@ -100,58 +99,44 @@ def main(config):
     )
 `;
 
-    // Step 3: Send to Tidbyt
+    // Step 3: Send to Tidbyt using /push endpoint
     console.log('📤 Pushing to Tidbyt...');
     
-    const url = `${TIDBYT_API}/devices/${TIDBYT_DEVICE}/installations`;
-    const payload = {
-      applet: {
-        source: appletCode
-      }
-    };
+    const url = `${TIDBYT_API}/devices/${TIDBYT_DEVICE}/push`;
     
     console.log(`   URL: ${url}`);
-    console.log(`   Authorization: Bearer ${TIDBYT_KEY.substring(0, 20)}...`);
-    console.log(`   Payload size: ${JSON.stringify(payload).length} bytes`);
+    console.log(`   Payload size: ${appletCode.length} bytes`);
     
     try {
       const tidbytRes = await axios({
         method: 'POST',
         url: url,
-        data: payload,
+        data: appletCode,
         headers: {
           'Authorization': `Bearer ${TIDBYT_KEY}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'text/plain'
         },
         timeout: 15000
       });
       
-      console.log(`✅ Successfully updated Tidbyt! (${ticketCount} tickets)`);
-      console.log(`   Response Status: ${tidbytRes.status}`);
-      console.log(`   Response: ${JSON.stringify(tidbytRes.data)}\n`);
+      console.log(`✅ Successfully updated Tidbyt! (${ticketCount} tickets)\n`);
       
     } catch (tidbytError) {
       console.error(`❌ Tidbyt API error:`);
-      console.error(`   Error message: ${tidbytError.message}`);
       console.error(`   Status: ${tidbytError.response?.status}`);
-      console.error(`   Status text: ${tidbytError.response?.statusText}`);
-      console.error(`   Response data: ${JSON.stringify(tidbytError.response?.data, null, 2)}`);
-      console.error(`   Response headers: ${JSON.stringify(tidbytError.response?.headers, null, 2)}`);
-      console.error(`   Request URL: ${tidbytError.config?.url}`);
-      console.error(`   Request data size: ${tidbytError.config?.data?.length} bytes\n`);
+      console.error(`   Message: ${JSON.stringify(tidbytError.response?.data)}\n`);
     }
     
   } catch (error) {
-    console.error(`❌ Unexpected error: ${error.message}`);
-    console.error(`   Stack: ${error.stack}\n`);
+    console.error(`❌ Unexpected error: ${error.message}\n`);
   }
 }
 
-// Create HTTP server for Render health checks
+// Create HTTP server for Render
 const server = http.createServer((req, res) => {
   if (req.url === '/health') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ status: 'ok', lastUpdate: new Date().toISOString() }));
+    res.end(JSON.stringify({ status: 'ok' }));
   } else {
     res.writeHead(200, { 'Content-Type': 'text/plain' });
     res.end('Tidbyt Syncro Backend Running\n');
@@ -169,7 +154,6 @@ updateTidbyt();
 // Then run every 5 minutes
 setInterval(updateTidbyt, 5 * 60 * 1000);
 
-// Keep the process alive
 console.log('💚 Backend running. Updates every 5 minutes.\n');
 process.on('SIGTERM', () => {
   console.log('🛑 Shutting down...');
