@@ -1,13 +1,9 @@
-// Tidbyt + Syncro 24/7 Backend
-// Automatically updates your Tidbyt display with open ticket count every 5 minutes
-
 const axios = require('axios');
 
 // Tidbyt endpoint
 const TIDBYT_API = 'https://api.tidbyt.com/v0';
 
-// Syncro endpoint - you need to replace 'YOUR_SUBDOMAIN' with your actual subdomain
-// For example, if your Syncro URL is https://mycompany.syncromsp.com, use 'mycompany'
+// Syncro endpoint
 const SYNCRO_SUBDOMAIN = process.env.SYNCRO_SUBDOMAIN || 'YOUR_SUBDOMAIN';
 const SYNCRO_API = `https://${SYNCRO_SUBDOMAIN}.syncromsp.com/api/v1`;
 
@@ -23,7 +19,7 @@ if (!TIDBYT_KEY || !TIDBYT_DEVICE || !SYNCRO_TOKEN || SYNCRO_SUBDOMAIN === 'YOUR
   console.error('  - TIDBYT_KEY');
   console.error('  - TIDBYT_DEVICE');
   console.error('  - SYNCRO_TOKEN');
-  console.error('  - SYNCRO_SUBDOMAIN (e.g., "mycompany" from https://mycompany.syncromsp.com)');
+  console.error('  - SYNCRO_SUBDOMAIN');
   process.exit(1);
 }
 
@@ -50,12 +46,12 @@ async function updateTidbyt() {
 load("render.star", "render")
 
 def main(config):
-    ticket_count = "${ticketCount}"
+    count = ${ticketCount}
     
     # Determine color based on ticket count
-    if int(ticket_count) > 10:
+    if count > 10:
         color = "#ff0000"  # Red
-    elif int(ticket_count) > 5:
+    elif count > 5:
         color = "#ffaa00"  # Orange
     else:
         color = "#00ff00"  # Green
@@ -78,12 +74,12 @@ def main(config):
                         color="#0ff"
                     ),
                     render.BigText(
-                        text=ticket_count,
+                        text=str(count),
                         font="6x13",
                         color=color
                     ),
                     render.Text(
-                        text="Updated: " + ticket_count,
+                        text="Updated",
                         font="tom-thumb",
                         color="#888"
                     )
@@ -97,9 +93,11 @@ def main(config):
     console.log('📤 Pushing to Tidbyt...');
     
     const tidbytRes = await axios.post(
-      `${TIDBYT_API}/devices/${TIDBYT_DEVICE}/push`,
+      `${TIDBYT_API}/devices/${TIDBYT_DEVICE}/installations`,
       {
-        applet: appletCode
+        applet: {
+          source: appletCode
+        }
       },
       {
         headers: {
@@ -114,6 +112,10 @@ def main(config):
     
   } catch (error) {
     console.error(`❌ Update failed: ${error.message}`);
+    if (error.response) {
+      console.error(`   Status: ${error.response.status}`);
+      console.error(`   Data: ${JSON.stringify(error.response.data)}`);
+    }
     console.error(`   Retrying in 5 minutes...\n`);
   }
 }
@@ -121,10 +123,9 @@ def main(config):
 // Run immediately on startup
 updateTidbyt();
 
-// Then run every 5 minutes (300,000 milliseconds)
+// Then run every 5 minutes
 setInterval(updateTidbyt, 5 * 60 * 1000);
 
-// Keep the process alive
 console.log('💚 Backend running. Press Ctrl+C to stop.\n');
 process.on('SIGTERM', () => {
   console.log('🛑 Shutting down...');
