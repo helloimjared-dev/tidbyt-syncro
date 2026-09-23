@@ -38,12 +38,19 @@ async function updateTidbyt() {
     // Step 1: Fetch open tickets from Syncro
     console.log(`[${new Date().toLocaleTimeString()}] Fetching open tickets from Syncro...`);
     
-    const syncroRes = await axios.get(`${SYNCRO_API}/tickets?status=open&api_key=${SYNCRO_TOKEN}`, {
-      timeout: 10000
-    });
-    
-    const ticketCount = syncroRes.data.tickets?.length || 0;
-    console.log(`✅ Found ${ticketCount} open tickets`);
+    let ticketCount = 0;
+    try {
+      const syncroRes = await axios.get(`${SYNCRO_API}/tickets?status=open&api_key=${SYNCRO_TOKEN}`, {
+        timeout: 10000
+      });
+      
+      ticketCount = syncroRes.data.tickets?.length || 0;
+      console.log(`✅ Found ${ticketCount} open tickets`);
+    } catch (syncroError) {
+      console.error(`❌ Syncro API error: ${syncroError.message}`);
+      console.error(`   Response: ${JSON.stringify(syncroError.response?.data)}`);
+      return; // Stop here if we can't get tickets
+    }
     
     // Step 2: Create the Pixlet app code
     const appletCode = `
@@ -93,53 +100,50 @@ def main(config):
     )
 `;
 
-    // Step 3: Send to Tidbyt using installations endpoint
+    // Step 3: Send to Tidbyt
     console.log('📤 Pushing to Tidbyt...');
-    console.log(`   Endpoint: ${TIDBYT_API}/devices/${TIDBYT_DEVICE}/installations`);
-    console.log(`   Applet code length: ${appletCode.length} characters`);
+    
+    const url = `${TIDBYT_API}/devices/${TIDBYT_DEVICE}/installations`;
+    const payload = {
+      applet: {
+        source: appletCode
+      }
+    };
+    
+    console.log(`   URL: ${url}`);
+    console.log(`   Authorization: Bearer ${TIDBYT_KEY.substring(0, 20)}...`);
+    console.log(`   Payload size: ${JSON.stringify(payload).length} bytes`);
     
     try {
-      const tidbytRes = await axios.post(
-        `${TIDBYT_API}/devices/${TIDBYT_DEVICE}/installations`,
-        {
-          applet: {
-            source: appletCode
-          }
+      const tidbytRes = await axios({
+        method: 'POST',
+        url: url,
+        data: payload,
+        headers: {
+          'Authorization': `Bearer ${TIDBYT_KEY}`,
+          'Content-Type': 'application/json'
         },
-        {
-          headers: {
-            'Authorization': `Bearer ${TIDBYT_KEY}`,
-            'Content-Type': 'application/json'
-          },
-          timeout: 10000,
-          validateStatus: false // Don't throw on any status code
-        }
-      );
+        timeout: 15000
+      });
       
+      console.log(`✅ Successfully updated Tidbyt! (${ticketCount} tickets)`);
       console.log(`   Response Status: ${tidbytRes.status}`);
-      console.log(`   Response Body: ${JSON.stringify(tidbytRes.data, null, 2)}`);
+      console.log(`   Response: ${JSON.stringify(tidbytRes.data)}\n`);
       
-      if (tidbytRes.status === 200 || tidbytRes.status === 201) {
-        console.log(`✅ Successfully updated Tidbyt! (${ticketCount} tickets)\n`);
-      } else {
-        console.error(`❌ Tidbyt API returned ${tidbytRes.status}: ${JSON.stringify(tidbytRes.data)}\n`);
-      }
-    } catch (postError) {
-      console.error(`❌ Network error during push: ${postError.message}\n`);
-      throw postError;
+    } catch (tidbytError) {
+      console.error(`❌ Tidbyt API error:`);
+      console.error(`   Error message: ${tidbytError.message}`);
+      console.error(`   Status: ${tidbytError.response?.status}`);
+      console.error(`   Status text: ${tidbytError.response?.statusText}`);
+      console.error(`   Response data: ${JSON.stringify(tidbytError.response?.data, null, 2)}`);
+      console.error(`   Response headers: ${JSON.stringify(tidbytError.response?.headers, null, 2)}`);
+      console.error(`   Request URL: ${tidbytError.config?.url}`);
+      console.error(`   Request data size: ${tidbytError.config?.data?.length} bytes\n`);
     }
     
   } catch (error) {
-    console.error(`❌ Update failed: ${error.message}`);
-    if (error.response) {
-      console.error(`   Status: ${error.response.status}`);
-      console.error(`   Headers: ${JSON.stringify(error.response.headers, null, 2)}`);
-      console.error(`   Data: ${JSON.stringify(error.response.data, null, 2)}`);
-    }
-    if (error.config) {
-      console.error(`   Request URL: ${error.config.url}`);
-    }
-    console.error(`   Retrying in 5 minutes...\n`);
+    console.error(`❌ Unexpected error: ${error.message}`);
+    console.error(`   Stack: ${error.stack}\n`);
   }
 }
 
@@ -156,17 +160,17 @@ const server = http.createServer((req, res) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-  console.log(`🌐 HTTP Server listening on port ${PORT}`);
+  console.log(`🌐 HTTP Server listening on port ${PORT}\n`);
 });
 
 // Run immediately on startup
 updateTidbyt();
 
-// Then run every 5 minutes (300,000 milliseconds)
+// Then run every 5 minutes
 setInterval(updateTidbyt, 5 * 60 * 1000);
 
 // Keep the process alive
-console.log('💚 Backend running. Press Ctrl+C to stop.\n');
+console.log('💚 Backend running. Updates every 5 minutes.\n');
 process.on('SIGTERM', () => {
   console.log('🛑 Shutting down...');
   process.exit(0);
