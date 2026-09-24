@@ -29,7 +29,7 @@ async function updateTidbyt() {
     
     let ticketCount = 0;
     try {
-      const syncroRes = await axios.get(`${SYNCRO_API}/tickets?filter=unresolved_tickets&api_key=${SYNCRO_TOKEN}`, {
+      const syncroRes = await axios.get(`${SYNCRO_API}/tickets?ticket_search_id=50059&api_key=${SYNCRO_TOKEN}`, {
         timeout: 10000
       });
       
