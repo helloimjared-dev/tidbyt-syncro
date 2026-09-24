@@ -1,5 +1,6 @@
+```js
 // Tidbyt + Syncro 24/7 Backend
-// Displays only the unresolved ticket count
+// Displays only the overall unresolved ticket count
 
 const axios = require('axios');
 const http = require('http');
@@ -49,25 +50,17 @@ async function updateTidbyt() {
       return;
     }
 
-    // Determine color based on ticket count
-    let color = '#00ff00'; // Green
-
-    if (ticketCount > 10) {
-      color = '#ff0000'; // Red
-    } else if (ticketCount > 5) {
-      color = '#ffaa00'; // Orange
-    }
-
-    // Display only the bold ticket count
+    // Display only the overall ticket count
+    // Large, bold, white text on a black background
     const svgImage = `
       <svg width="64" height="32" xmlns="http://www.w3.org/2000/svg">
         <rect width="64" height="32" fill="#000000"/>
         <text
           x="32"
-          y="22"
-          font-family="Arial"
-          font-size="24"
-          fill="${color}"
+          y="24"
+          font-family="Arial, sans-serif"
+          font-size="32"
+          fill="#ffffff"
           text-anchor="middle"
           font-weight="bold"
         >${ticketCount}</text>
@@ -133,3 +126,4 @@ setInterval(updateTidbyt, 5 * 60 * 1000);
 console.log('💚 Backend running. Updates every 5 minutes.\n');
 
 process.on('SIGTERM', () => process.exit(0));
+```
