@@ -30,35 +30,23 @@ async function updateTidbyt() {
     let ticketCount = 0;
     try {
       const url = `${SYNCRO_API}/tickets?ticket_search_id=50059&api_key=${SYNCRO_TOKEN}`;
-      console.log(`   API URL: ${url.replace(SYNCRO_TOKEN, 'XXXXX')}`);
       
       const syncroRes = await axios.get(url, {
         timeout: 10000
       });
       
-      console.log(`   API Status: ${syncroRes.status}`);
-      console.log(`   API Response Keys: ${Object.keys(syncroRes.data).join(', ')}`);
-      console.log(`   Full Response: ${JSON.stringify(syncroRes.data, null, 2)}`);
-      
       ticketCount = syncroRes.data.tickets?.length || 0;
       console.log(`✅ Found ${ticketCount} unresolved tickets`);
     } catch (syncroError) {
       console.error(`❌ Syncro API error: ${syncroError.message}`);
-      console.error(`   Response: ${JSON.stringify(syncroError.response?.data)}`);
       return;
     }
     
-    // Determine color based on ticket count
-    let color = '#00ff00'; // Green
-    if (ticketCount > 10) color = '#ff0000'; // Red
-    else if (ticketCount > 5) color = '#ffaa00'; // Orange
-    
-    // Create SVG image
+    // Create SVG image - large white text on black background
     const svgImage = `
 <svg width="64" height="32" xmlns="http://www.w3.org/2000/svg">
   <rect width="64" height="32" fill="#000000"/>
-  <text x="32" y="8" font-family="Arial" font-size="6" fill="#00ffff" text-anchor="middle">UNRESOLVED</text>
-  <text x="32" y="22" font-family="Arial" font-size="16" fill="${color}" text-anchor="middle" font-weight="bold">${ticketCount}</text>
+  <text x="32" y="26" font-family="Arial" font-size="28" font-weight="bold" fill="#ffffff" text-anchor="middle">${ticketCount}</text>
 </svg>
 `;
     
