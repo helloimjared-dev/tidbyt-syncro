@@ -28,18 +28,13 @@ async function updateTidbyt() {
     console.log(`[${new Date().toLocaleTimeString()}] Fetching unresolved tickets from Syncro...`);
     
     let ticketCount = 0;
-
     try {
-      const syncroRes = await axios.get(
-        `${SYNCRO_API}/tickets?status=unresolved&api_key=${SYNCRO_TOKEN}`,
-        {
-          timeout: 10000
-        }
-      );
+      const syncroRes = await axios.get(`${SYNCRO_API}/tickets?filter=unresolved_tickets&api_key=${SYNCRO_TOKEN}`, {
+        timeout: 10000
+      });
       
       ticketCount = syncroRes.data.tickets?.length || 0;
       console.log(`✅ Found ${ticketCount} unresolved tickets`);
-      
     } catch (syncroError) {
       console.error(`❌ Syncro API error: ${syncroError.message}`);
       return;
@@ -54,7 +49,7 @@ async function updateTidbyt() {
     const svgImage = `
 <svg width="64" height="32" xmlns="http://www.w3.org/2000/svg">
   <rect width="64" height="32" fill="#000000"/>
-  <text x="32" y="8" font-family="Arial" font-size="6" fill="#00ffff" text-anchor="middle">TICKETS</text>
+  <text x="32" y="8" font-family="Arial" font-size="6" fill="#00ffff" text-anchor="middle">UNRESOLVED</text>
   <text x="32" y="22" font-family="Arial" font-size="16" fill="${color}" text-anchor="middle" font-weight="bold">${ticketCount}</text>
 </svg>
 `;
@@ -86,7 +81,7 @@ async function updateTidbyt() {
         timeout: 15000
       });
       
-      console.log(`✅ Successfully updated Tidbyt! (${ticketCount} tickets)\n`);
+      console.log(`✅ Successfully updated Tidbyt! (${ticketCount} unresolved tickets)\n`);
       
     } catch (tidbytError) {
       console.error(`❌ Tidbyt API error:`);
@@ -110,14 +105,10 @@ const server = http.createServer((req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-
-server.listen(PORT, () => {
-  console.log(`🌐 HTTP Server listening on port ${PORT}\n`);
-});
+server.listen(PORT, () => console.log(`🌐 HTTP Server listening on port ${PORT}\n`));
 
 updateTidbyt();
 setInterval(updateTidbyt, 5 * 60 * 1000);
 
 console.log('💚 Backend running. Updates every 5 minutes.\n');
-
 process.on('SIGTERM', () => process.exit(0));
