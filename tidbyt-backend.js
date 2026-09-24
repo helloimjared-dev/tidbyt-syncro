@@ -1,5 +1,5 @@
 // Tidbyt + Syncro 24/7 Backend
-// Generates WebP image of unresolved ticket count and pushes to Tidbyt
+// Displays only the unresolved ticket count
 
 const axios = require('axios');
 const http = require('http');
@@ -43,7 +43,6 @@ async function updateTidbyt() {
 
       ticketCount = syncroRes.data.tickets?.length || 0;
 
-      // Only log the total count
       console.log(`🎫 Unresolved tickets: ${ticketCount}`);
     } catch (syncroError) {
       console.error(`❌ Syncro API error: ${syncroError.message}`);
@@ -59,35 +58,18 @@ async function updateTidbyt() {
       color = '#ffaa00'; // Orange
     }
 
-    // Create SVG image
+    // Display only the bold ticket count
     const svgImage = `
       <svg width="64" height="32" xmlns="http://www.w3.org/2000/svg">
         <rect width="64" height="32" fill="#000000"/>
         <text
           x="32"
-          y="8"
-          font-family="Arial"
-          font-size="6"
-          fill="#00ffff"
-          text-anchor="middle"
-        >UNRESOLVED</text>
-        <text
-          x="32"
           y="22"
           font-family="Arial"
-          font-size="16"
+          font-size="24"
           fill="${color}"
           text-anchor="middle"
           font-weight="bold"
-        >${ticketCount}</text>
-        <text
-          x="32"
-          y="26"
-          font-family="Arial"
-          font-size="28"
-          font-weight="bold"
-          fill="#ffffff"
-          text-anchor="middle"
         >${ticketCount}</text>
       </svg>
     `;
@@ -101,23 +83,27 @@ async function updateTidbyt() {
 
       const url = `${TIDBYT_API}/devices/${TIDBYT_DEVICE}/push`;
 
-      const payload = {
-        image: base64Image,
-        duration: 300
-      };
-
-      await axios.post(url, payload, {
-        headers: {
-          Authorization: `Bearer ${TIDBYT_KEY}`,
-          'Content-Type': 'application/json'
+      await axios.post(
+        url,
+        {
+          image: base64Image,
+          duration: 300
         },
-        timeout: 15000
-      });
+        {
+          headers: {
+            Authorization: `Bearer ${TIDBYT_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          timeout: 15000
+        }
+      );
 
-      console.log(`✅ Tidbyt updated: ${ticketCount} unresolved tickets\n`);
+      console.log(`✅ Tidbyt updated: ${ticketCount}\n`);
     } catch (tidbytError) {
       console.error(
-        `❌ Tidbyt API error: ${tidbytError.response?.status || tidbytError.message}`
+        `❌ Tidbyt API error: ${
+          tidbytError.response?.status || tidbytError.message
+        }`
       );
     }
   } catch (error) {
