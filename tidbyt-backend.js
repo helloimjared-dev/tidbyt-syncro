@@ -1,4 +1,3 @@
-```js
 // Tidbyt + Syncro 24/7 Backend
 // Displays only the overall unresolved ticket count
 
@@ -126,4 +125,3 @@ setInterval(updateTidbyt, 5 * 60 * 1000);
 console.log('💚 Backend running. Updates every 5 minutes.\n');
 
 process.on('SIGTERM', () => process.exit(0));
-```
