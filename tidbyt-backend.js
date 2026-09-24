@@ -29,14 +29,22 @@ async function updateTidbyt() {
     
     let ticketCount = 0;
     try {
-      const syncroRes = await axios.get(`${SYNCRO_API}/tickets?ticket_search_id=50059&api_key=${SYNCRO_TOKEN}`, {
+      const url = `${SYNCRO_API}/tickets?ticket_search_id=50059&api_key=${SYNCRO_TOKEN}`;
+      console.log(`   API URL: ${url.replace(SYNCRO_TOKEN, 'XXXXX')}`);
+      
+      const syncroRes = await axios.get(url, {
         timeout: 10000
       });
+      
+      console.log(`   API Status: ${syncroRes.status}`);
+      console.log(`   API Response Keys: ${Object.keys(syncroRes.data).join(', ')}`);
+      console.log(`   Full Response: ${JSON.stringify(syncroRes.data, null, 2)}`);
       
       ticketCount = syncroRes.data.tickets?.length || 0;
       console.log(`✅ Found ${ticketCount} unresolved tickets`);
     } catch (syncroError) {
       console.error(`❌ Syncro API error: ${syncroError.message}`);
+      console.error(`   Response: ${JSON.stringify(syncroError.response?.data)}`);
       return;
     }
     
@@ -70,7 +78,7 @@ async function updateTidbyt() {
       const url = `${TIDBYT_API}/devices/${TIDBYT_DEVICE}/push`;
       const payload = {
         image: base64Image,
-        duration: 300  // 5 minutes in seconds
+        duration: 300
       };
       
       const tidbytRes = await axios.post(url, payload, {
